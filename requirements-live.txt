@@ -1,0 +1,7 @@
+# Optional: offline GUI/demo and core tests require only Python + Tkinter.
+# Compatibility ranges, not a fully resolved lockfile. Freeze versions after your live smoke test.
+azure-identity>=1.17,<2
+azure-communication-email>=1.0,<2
+azure-communication-sms>=1.1,<2
+websockets>=14,<17
+sounddevice>=0.5,<0.6
