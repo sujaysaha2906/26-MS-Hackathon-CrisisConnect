@@ -2,7 +2,35 @@
 
 CrisisConnect is a voice-only chatbot. It checks wellbeing, asks for a broad location, compares it with device location when available, checks FEMA declarations, and then continues a supportive voice conversation. It does not ask for confidential information.
 
-## Conversation workflow
+## Start a local demo
+
+Demo mode opens without Azure credentials or `config.json`. It supports basic, scripted **voice chat on your computer**, with no Census, FEMA, device-location, or cloud calls. It is a conversation demo, not a disaster-verification simulation or a local language model.
+
+Windows CMD (one-time setup, then launch):
+
+```cmd
+scripts\win\setup_demo.cmd
+scripts\win\start_demo.cmd
+```
+
+For later launches, run only `scripts\win\start_demo.cmd`. Windows uses its installed English (US) desktop speech recognizer and system voice. If recognition is unavailable, install the English (US) speech language component in Windows Settings. The setup script installs the microphone dependency into `venv`.
+
+Linux Bash:
+
+```bash
+# Debian/Ubuntu system prerequisites, installed once:
+sudo apt install python3-venv python3-tk libportaudio2 espeak-ng curl unzip
+bash scripts/linux/setup_demo.sh
+bash scripts/linux/start_demo.sh
+```
+
+Linux setup downloads the small English Vosk model (about 40 MB) into `models/` and installs demo dependencies. Later launches use only `bash scripts/linux/start_demo.sh`, with no internet required. Speech uses the local Vosk model and eSpeak. [Vosk model details](https://alphacephei.com/vosk/models)
+
+You can also launch directly with `venv\Scripts\python.exe main.py --demo` on Windows or `venv/bin/python main.py --demo` on Linux. The default launch without `--demo` remains live mode.
+
+Select **Start conversation**, then **Record answer**, speak, and select **Finish answer**. Try “hello”, “I feel worried”, “my home flooded”, or “thank you”. Say **goodbye** or select **End conversation** to finish. Audio stays in memory and speech runs locally. The demo never asks for confidential information.
+
+## Live conversation workflow
 
 ```mermaid
 flowchart TD
@@ -93,7 +121,7 @@ Setup creates `venv` in the project root. Activate it optionally with `call venv
 
 ## Privacy
 
-The chatbot never asks for names, identity numbers, contact details, home addresses, financial information, passwords, immigration information, or medical records. Public town/state names are sent to Census; public geographic codes are sent to FEMA. Azure processes the recorded audio and the conversation's redacted text. Common identifiers are removed from transcribed text, but redaction cannot remove information already spoken into cloud-processed audio or guarantee removal of every personal detail. Do not volunteer confidential information.
+The chatbot never asks for names, identity numbers, contact details, home addresses, financial information, passwords, immigration information, or medical records. In live mode, public town/state names are sent to Census, public geographic codes are sent to FEMA, and Azure processes recorded audio and the conversation's redacted text. Demo mode processes speech locally and uses none of these services. Common identifiers are removed from transcribed text, but redaction cannot remove information already spoken into cloud-processed audio in live mode or guarantee removal of every personal detail. Do not volunteer confidential information.
 
 Audio, device readings, and answers are held in memory. The application does not write conversation or location logs. Session state clears when the conversation ends. No email, SMS, action-plan, typed-chat, or dispatch feature is exposed.
 

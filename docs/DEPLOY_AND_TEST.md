@@ -2,6 +2,8 @@
 
 See [README.md](../README.md) for the wellbeing, location, FEMA, and voice-conversation workflow and its matching rules.
 
+For basic local voice chat, run `scripts\win\setup_demo.cmd` once followed by `scripts\win\start_demo.cmd`, or the Linux `setup_demo.sh` and `start_demo.sh` scripts. Demo mode does not need Azure configuration and bypasses all location/FEMA checks. Verify the local-demo banner, microphone capture, spoken replies, repeat, stop, and restart with networking disconnected. The steps below apply to live mode.
+
 ## Setup
 
 1. Create `venv` with the platform script and install `requirements-live.txt`.

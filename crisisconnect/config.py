@@ -26,6 +26,7 @@ class Settings:
     voice_model: str = "gpt-4.1-mini"
     voice_api: str = "2026-04-10"
     voice_name: str = "en-US-AvaNeural"
+    voice_transcription_model: str = "mai-transcribe"
     location_max_retries: int = 3
     location_match_km: float = 10.0
     fema_lookback_days: int = 30
@@ -55,6 +56,7 @@ class Settings:
             "AZURE_VOICELIVE_MODEL": "voice_model",
             "AZURE_VOICELIVE_API_VERSION": "voice_api",
             "AZURE_VOICELIVE_VOICE": "voice_name",
+            "AZURE_VOICELIVE_TRANSCRIPTION_MODEL": "voice_transcription_model",
         }
         options = {}
         for key, field, maximum in (

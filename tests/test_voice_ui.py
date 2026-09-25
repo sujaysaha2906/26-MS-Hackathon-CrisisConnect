@@ -13,6 +13,8 @@ class VoiceUITests(unittest.TestCase):
         app = App.__new__(App)
         app.root = Mock()
         app.status = Mock()
+        app.language = "en"
+        app.language_label = Mock()
         app.controls = Mock()
         app.recorder = Mock()
         app.results = queue.Queue()

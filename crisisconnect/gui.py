@@ -9,15 +9,19 @@ from .workflow import Workflow
 from .device_location import DeviceLocation
 from .public_data import CensusPlaces, FEMADeclarations
 from .voice import Recorder
+from .demo import DemoConversation
+from .languages import SpeechTurn, LANGUAGES, localize
 
 
 class App:
     def __init__(self, root, settings, voice):
         self.root, self.settings, self.voice = root, settings, voice
-        self.locations = DeviceLocation()
-        self.places = CensusPlaces()
-        self.fema = FEMADeclarations(settings.fema_lookback_days)
+        self.demo = settings.mode == "demo"
+        self.locations = None if self.demo else DeviceLocation()
+        self.places = None if self.demo else CensusPlaces()
+        self.fema = None if self.demo else FEMADeclarations(settings.fema_lookback_days)
         self.interview = None
+        self.language = "en"
         self.recorder = Recorder()
         self.results = queue.Queue()
         self.cancel = threading.Event()
@@ -26,19 +30,25 @@ class App:
         self.closed = False
         self.timer = None
         self.generation = 0
-        root.title("CrisisConnect - Voice conversation")
+        root.title("CrisisConnect - Local demo" if self.demo else "CrisisConnect - Voice conversation")
         root.geometry("700x440")
         root.minsize(560, 360)
         frame = ttk.Frame(root, padding=28)
         frame.pack(fill="both", expand=True)
         ttk.Label(frame, text="CrisisConnect", font=("Segoe UI", 26, "bold")).pack(anchor="w")
         ttk.Label(frame, text="Talk about how the crisis has affected you.", font=("Segoe UI", 12)).pack(anchor="w", pady=12)
-        ttk.Label(frame, text="A wellbeing check, location confirmation, and FEMA declaration lookup.", wraplength=600).pack(anchor="w")
-        self.consent = tk.BooleanVar(value=False)
-        ttk.Checkbutton(frame, variable=self.consent,
+        ttk.Label(frame, text="LOCAL DEMO - basic scripted chat, no online services" if self.demo else
+                  "A wellbeing check, location confirmation, and FEMA declaration lookup.", wraplength=600).pack(anchor="w")
+        self.consent = tk.BooleanVar(value=self.demo)
+        if self.demo:
+            ttk.Label(frame, text="Speech stays on this computer. Select Start conversation to begin.", wraplength=600).pack(anchor="w", pady=14)
+        else:
+            ttk.Checkbutton(frame, variable=self.consent,
                         text="I agree to Azure voice processing and device location access for this conversation.").pack(anchor="w", pady=14)
-        ttk.Label(frame, text="Town/state names are checked with Census and FEMA. Device coordinates stay on this device.", wraplength=600).pack(anchor="w")
+            ttk.Label(frame, text="Town/state names are checked with Census and FEMA. Device coordinates stay on this device.", wraplength=600).pack(anchor="w")
         ttk.Label(frame, text="Avoid sharing identity numbers, bank details, or exact addresses.", wraplength=570).pack(anchor="w")
+        self.language_label = tk.StringVar(value="Language: auto-detect (English / Español / বাংলা)")
+        ttk.Label(frame, textvariable=self.language_label).pack(anchor="w")
         actions = ttk.Frame(frame)
         actions.pack(fill="x", pady=20)
         self.start_button = ttk.Button(actions, text="Start conversation", command=self.start)
@@ -98,7 +108,7 @@ class App:
                         done(value)
                     else:
                         self.status.set(str(value) if isinstance(value, (SafeError, ValueError))
-                                        else "Voice operation failed. Check your connection and audio devices, then retry.")
+                                        else "Voice operation failed. Check your speech setup and audio devices, then retry.")
                 self.controls()
         except queue.Empty:
             pass
@@ -107,15 +117,21 @@ class App:
     def start(self):
         if not self.permitted():
             return
-        self.interview = Workflow(self.settings, self.locations, self.places, self.fema, self.voice)
+        self.interview = DemoConversation() if self.demo else Workflow(self.settings, self.locations, self.places, self.fema, self.voice)
+        self.language = "en"
         self.repeat()
 
     def repeat(self):
         if not self.permitted() or self.interview is None:
             return
-        prompt = self.interview.prompt
+        language = self.language
+        try:
+            prompt = localize(self.interview.prompt, language)
+        except SafeError as exc:
+            self.status.set(str(exc))
+            return
         self.status.set("Speaking...")
-        self.run(lambda cancel: self.voice.speak(prompt, cancel=cancel), self.spoken)
+        self.run(lambda cancel: self.voice.speak(prompt, cancel=cancel, language=language), self.spoken)
 
     def spoken(self, _):
         if self.interview.complete:
@@ -155,12 +171,17 @@ class App:
             self.status.set("Audio was interrupted. Please record your answer again.")
             return
         self.status.set("Listening to your answer...")
-        self.run(lambda cancel: self.voice.transcribe(audio, cancel=cancel), self.answered)
+        language = self.language
+        self.run(lambda cancel: self.voice.transcribe_turn(audio, previous_language=language, cancel=cancel), self.answered)
 
     def answered(self, transcript):
         if not self.permitted():
             return
         workflow = self.interview
+        if isinstance(transcript, SpeechTurn):
+            self.language = transcript.language
+            self.language_label.set("Language: " + LANGUAGES[self.language])
+            transcript = transcript.text
         self.status.set("Checking your answer...")
         self.run(lambda cancel: workflow.advance(transcript, cancel), self.advanced)
 
@@ -181,6 +202,8 @@ class App:
         self.recording = False
         self.busy = False
         self.interview = None
+        self.language = "en"
+        self.language_label.set("Language: auto-detect (English / Español / বাংলা)")
         self.status.set("Conversation ended. Session answers cleared.")
         self.controls()
 

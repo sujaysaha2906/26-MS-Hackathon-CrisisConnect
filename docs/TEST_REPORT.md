@@ -1,3 +1,15 @@
+# Local voice demo validation - September 25, 2026
+
+- Full unit suite: 87 tests, 80 passed, 7 pre-existing WebSocket tests skipped; no failures.
+- Demo tests verify launch without config/Azure, basic local dialogue with Python network connections blocked, stopping and session reset, cancellation, in-memory WAV input, redaction, and safe stdin handling for speech content.
+- Actual Windows local speech smoke check passed: generated a fixed sentence into memory at 24 kHz and recognized it through the demo adapter. No microphone recording or audible playback was used. An engine-specific end-of-stream error was found and fixed during this check.
+- Actual Tkinter demo construction passed with Python network connections blocked. The smoke-test window was hidden.
+- Windows speech required running the smoke check outside the execution sandbox, which denied access to the installed voices.
+- Physical microphone/speaker use, Linux Vosk/eSpeak, Linux setup/model download, and packaged demo execution remain untested.
+
+Earlier reports below cover the live workflow and previous versions.
+
+---
 # Wellbeing, location, and FEMA workflow validation - September 25, 2026
 
 Windows, Python 3.14.3, PyCharm-configured test environment.
