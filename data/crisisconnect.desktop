@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=CrisisConnect
+Comment=Voice crisis conversation
+Exec=false
+NoDisplay=true
+X-Geoclue-Reason=Compare your device location with the town you provided for a crisis conversation.

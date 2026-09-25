@@ -1,0 +1,6 @@
+{
+  "flood": {"label":"Flood · displaced renter (fictional)","state":"VA","county":"Richmond city","event":"flood","incident_date":"2026-09-20","text":"My apartment flooded. I need a place to stay and food. I lost my ID.","expected_needs":["shelter","food","recovery","documents"]},
+  "wildfire": {"label":"Wildfire · evacuated family (fictional)","state":"CA","county":"Los Angeles County","event":"wildfire","incident_date":"2026-09-20","text":"We evacuated because of a wildfire. We need shelter and help with damage to our home.","expected_needs":["shelter","recovery"]},
+  "urgent": {"label":"Urgent danger drill (fictional)","state":"FL","county":"Lee County","event":"hurricane","incident_date":"2026-09-20","text":"We are trapped and in immediate danger.","expected_needs":["human"]},
+  "appeal": {"label":"Missing documents / appeal (fictional)","state":"TX","county":"Harris County","event":"flood","incident_date":"2026-09-20","text":"I lost my identification documents and want a human representative to explain an appeal.","expected_needs":["documents","human"]}
+}
