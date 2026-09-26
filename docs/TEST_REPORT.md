@@ -1,3 +1,12 @@
+# Agent-handoff validation - September 25, 2026
+
+- Full unit suite: 107 tests passed with no failures or skips.
+- The previously skipped Voice Live WebSocket tests now run against their local synthetic server.
+- New tests cover explicit agent requests before location checks, model-classified human and urgent needs after FEMA verification, retryable synchronous transfer failures, cancellation before transfer, and the race where cancellation arrives after a transfer request is accepted.
+- The Call Automation adapter was checked against the installed `azure-communication-callautomation` 1.6.0 method signature. It sends only a fixed operation context and does not place conversation text in SIP or VoIP headers.
+- No real telephone call or live agent queue was used. A deployment still needs an active Call Automation connection, a configured agent or queue identifier, and callback handling for `CallTransferAccepted` and `CallTransferFailed`.
+
+---
 # Local voice demo validation - September 25, 2026
 
 - Full unit suite: 87 tests, 80 passed, 7 pre-existing WebSocket tests skipped; no failures.

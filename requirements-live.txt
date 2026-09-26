@@ -1,6 +1,7 @@
 # Dependencies for the voice chatbot.
 # Compatibility ranges, not a fully resolved lockfile. Freeze versions after your live smoke test.
 azure-identity>=1.17,<2
+azure-communication-callautomation>=1.5,<2
 websockets>=14,<17
 sounddevice>=0.5,<0.6
 dbus-next>=0.2.3,<0.3; sys_platform == "linux"

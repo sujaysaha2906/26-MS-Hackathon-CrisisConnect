@@ -17,6 +17,9 @@ CHAT_QUESTIONS = {
     "anything_else": "Is there anything else about the situation you would like to discuss, without sharing private information?",
 }
 ASK_LOCATION = "What town or city and state are you in? Please say just the place names, not your address."
+AGENT_REQUEST = re.compile(
+    r"\b(?:human|agent|representative|real person)\b|\b(?:speak|talk) to (?:a |some)?(?:person|someone)\b", re.I)
+URGENT_REQUEST = re.compile(r"\b(?:trapped|cannot breathe|can't breathe|immediate danger|medical emergency)\b", re.I)
 
 
 def yes_no(text):
@@ -31,8 +34,9 @@ def yes_no(text):
 
 
 class Workflow:
-    def __init__(self, settings, locations, places, fema, voice):
+    def __init__(self, settings, locations, places, fema, voice, handoff=None):
         self.settings, self.locations, self.places, self.fema, self.voice = settings, locations, places, fema, voice
+        self.handoff = handoff
         self.stage = "wellbeing"
         self.prompt = "Are you okay? Please say yes or no."
         self.complete = False
@@ -42,13 +46,17 @@ class Workflow:
         self.summary = ""
         self.history = []
         self.current_question = None
+        self.handoff_requested = False
 
     def advance(self, text, cancel=None):
         # Commit only after external operations succeed; retries cannot half-advance a session.
         result = copy.copy(self)
         result.history = list(self.history)
         result.answer(text, cancel)
-        check_cancel(cancel)
+        # A transfer request cannot be rolled back if cancellation arrives just
+        # after Call Automation accepts it.
+        if not result.handoff_requested:
+            check_cancel(cancel)
         return result
 
     def finish(self, message):
@@ -65,6 +73,11 @@ class Workflow:
         if normalized in ("stop", "quit", "end", "end conversation", "goodbye"):
             self.finish("I'm here if you need me.")
             return
+        if self.handoff is not None:
+            reason = "urgent" if URGENT_REQUEST.search(text) else "human_requested" if AGENT_REQUEST.search(text) else None
+            if reason:
+                self.request_handoff(reason, cancel)
+                return
         if self.stage == "wellbeing":
             okay = yes_no(text)
             if okay is True:
@@ -99,7 +112,21 @@ class Workflow:
                 self.prompt = "Turn on location in your device settings and say check again, or say continue to use the town you gave me."
         elif self.stage == "chat":
             self.history.append({"question": self.current_question, "answer": redact(text)[:600]})
+            if self.handoff is not None:
+                intent = self.voice.classify(text, cancel=cancel)
+                if intent["urgent"] or "human" in intent["needs"]:
+                    reason = "urgent" if intent["urgent"] else "human_requested"
+                    self.request_handoff(reason, cancel)
+                    return
             self.next_question(cancel)
+
+    def request_handoff(self, reason, cancel):
+        self.handoff.transfer({"reason": reason, "summary": self.summary}, cancel=cancel)
+        self.handoff_requested = True
+        message = "I'm requesting a transfer to a support agent now."
+        if reason == "urgent":
+            message += " If you are in immediate danger or have a medical emergency, call 911."
+        self.finish(message)
 
     def location_retry(self, reason):
         # This count is correction prompts AFTER the initial location attempt.

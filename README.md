@@ -50,6 +50,9 @@ flowchart TD
     K -->|No| I
     K -->|Yes| L[Send a small situation summary to Voice Live]
     L --> M[Continue with non-confidential spoken questions and answers]
+    M --> N{Human agent or urgent help needed?}
+    N -->|No| M
+    N -->|Yes, telephone host| O[Request transfer through Call Automation]
 ```
 
 1. The first question is **Are you okay?** A yes ends the conversation with **I am here if you need me.** An unclear answer is clarified.
@@ -59,6 +62,7 @@ flowchart TD
 5. The app checks **OpenFEMA Disaster Declarations Summaries v2** for the resolved county, including statewide declarations. No matching recent declaration leads to a gentle exit. A failed service request is an error that can be retried; it is never treated as evidence of no disaster.
 6. After a matching declaration, the app sends Voice Live a small summary: the person reports not being okay, the public area name, whether device location matched, and the FEMA incident details. Exact device coordinates are excluded.
 7. Voice Live selects relevant questions from reviewed prompts about the situation, shelter, food/water, whether others are present, and practical support. It cannot invent requests for confidential information. The conversation ends after these topics or when the person says **stop**.
+8. In a telephone host, explicit agent and emergency phrases can trigger handoff at any stage. Answers in the post-verification conversation are also classified for urgency or a need for a person. The workflow then asks its configured Call Automation handoff to transfer the existing call to the supplied agent or queue target. An immediate transfer-request failure leaves the turn active so it can be retried; the telephone host must process the later accepted/failed callback. The desktop launcher has no telephone call connection, so it continues the voice conversation without claiming that a transfer occurred. An agent transfer is not emergency dispatch; urgent callers are also told to call 911.
 
 Use **Start conversation**, then **Record answer** and **Finish answer** for each turn. **Repeat question** does not advance the flow. Recordings have a 30-second limit. **End conversation** clears the session; it closes the conversation, not the desktop application.
 
@@ -84,6 +88,8 @@ Replace `YOUR-RESOURCE` with your resource name. Config values take precedence o
 ## Setup
 
 Use Python 3.11+ with Tkinter, a microphone, headphones or speakers, Azure Voice Live access, and internet access to Census and FEMA. Install Azure CLI separately for `az login` and grant the signed-in account access to the Voice Live resource.
+
+Telephone deployments can construct `crisisconnect.handoff.CallAutomationHandoff` with the current Azure Communication Services `CallConnectionClient`, an agent or queue identifier, and an optional operation callback URL, then pass it to `App(..., handoff=...)` or directly to `Workflow`. Call Automation accepts the transfer asynchronously; the telephone host must handle `CallTransferAccepted` and `CallTransferFailed` callbacks.
 
 Windows CMD, from the project root:
 
@@ -123,7 +129,7 @@ Setup creates `venv` in the project root. Activate it optionally with `call venv
 
 The chatbot never asks for names, identity numbers, contact details, home addresses, financial information, passwords, immigration information, or medical records. In live mode, public town/state names are sent to Census, public geographic codes are sent to FEMA, and Azure processes recorded audio and the conversation's redacted text. Demo mode processes speech locally and uses none of these services. Common identifiers are removed from transcribed text, but redaction cannot remove information already spoken into cloud-processed audio in live mode or guarantee removal of every personal detail. Do not volunteer confidential information.
 
-Audio, device readings, and answers are held in memory. The application does not write conversation or location logs. Session state clears when the conversation ends. No email, SMS, action-plan, typed-chat, or dispatch feature is exposed.
+Audio, device readings, and answers are held in memory. The application does not write conversation or location logs. Session state clears when the conversation ends. No email, SMS, action-plan, typed-chat, or emergency-dispatch feature is exposed.
 
 ## Tests and packaging
 

@@ -144,6 +144,70 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(self.flow.summary, "")
         self.assertIsNone(self.flow.place)
 
+    def test_configured_handoff_transfers_human_request_without_coordinates(self):
+        handoff = Mock()
+        self.flow.handoff = handoff
+        self.voice.classify.return_value = {"needs": ["human"], "urgent": False}
+        self.location()
+        self.step("yes")
+        self.step("My situation is complicated")
+        self.assertTrue(self.flow.complete)
+        self.assertIn("transfer to a support agent", self.flow.prompt)
+        context = handoff.transfer.call_args.args[0]
+        self.assertEqual(context["reason"], "human_requested")
+        self.assertNotIn(str(PLACE.latitude), str(context))
+        self.assertNotIn(str(PLACE.longitude), str(context))
+
+    def test_configured_handoff_routes_urgent_answer_and_transfer_can_retry(self):
+        handoff = Mock()
+        handoff.transfer.side_effect = SafeError("transfer unavailable")
+        self.flow.handoff = handoff
+        self.voice.classify.return_value = {"needs": ["shelter"], "urgent": True}
+        self.location()
+        self.step("yes")
+        original = self.flow
+        with self.assertRaisesRegex(SafeError, "transfer unavailable"):
+            self.step("My situation changed")
+        self.assertIs(self.flow, original)
+        self.assertFalse(self.flow.complete)
+        handoff.transfer.side_effect = None
+        self.step("My situation changed")
+        self.assertTrue(self.flow.complete)
+        self.assertIn("call 911", self.flow.prompt)
+
+    def test_explicit_agent_request_transfers_before_location_checks(self):
+        handoff = Mock()
+        self.flow.handoff = handoff
+        self.step("I need a human representative")
+        self.assertTrue(self.flow.complete)
+        self.assertEqual(handoff.transfer.call_args.args[0]["reason"], "human_requested")
+        self.locations.read.assert_not_called()
+        self.places.resolve.assert_not_called()
+        self.fema.find.assert_not_called()
+        self.voice.classify.assert_not_called()
+
+    def test_cancellation_after_accepted_transfer_does_not_report_failure(self):
+        cancelled = threading.Event()
+        handoff = Mock()
+        handoff.transfer.side_effect = lambda context, cancel=None: cancel.set()
+        self.flow.handoff = handoff
+        transferred = self.flow.advance("I need a human agent", cancelled)
+        self.assertTrue(transferred.complete)
+        self.assertTrue(transferred.handoff_requested)
+        handoff.transfer.assert_called_once()
+
+    def test_configured_handoff_allows_non_human_conversation_to_continue(self):
+        handoff = Mock()
+        self.flow.handoff = handoff
+        self.voice.classify.return_value = {"needs": ["shelter"], "urgent": False}
+        self.location()
+        self.step("yes")
+        first_question = self.flow.current_question
+        self.step("I need somewhere safe to stay")
+        self.assertFalse(self.flow.complete)
+        self.assertNotEqual(self.flow.current_question, first_question)
+        handoff.transfer.assert_not_called()
+
     def test_cancel_stops_before_network(self):
         cancel = threading.Event()
         cancel.set()

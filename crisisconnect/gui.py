@@ -14,8 +14,9 @@ from .languages import SpeechTurn, LANGUAGES, localize
 
 
 class App:
-    def __init__(self, root, settings, voice):
+    def __init__(self, root, settings, voice, handoff=None):
         self.root, self.settings, self.voice = root, settings, voice
+        self.handoff = handoff
         self.demo = settings.mode == "demo"
         self.locations = None if self.demo else DeviceLocation()
         self.places = None if self.demo else CensusPlaces()
@@ -117,7 +118,8 @@ class App:
     def start(self):
         if not self.permitted():
             return
-        self.interview = DemoConversation() if self.demo else Workflow(self.settings, self.locations, self.places, self.fema, self.voice)
+        self.interview = (DemoConversation() if self.demo else
+                          Workflow(self.settings, self.locations, self.places, self.fema, self.voice, self.handoff))
         self.language = "en"
         self.repeat()
 
